@@ -7,7 +7,9 @@ class Boid():
     def __init__(self, x, y, width, height):
         self.max_steer = 1
         self.max_speed = 5
+        self.min_speed = 0.5
         self.sight_radius = 100
+        self.personal_space_radius = 50
         self.width = width
         self.height = height
         self.position = Vector(x, y)
@@ -40,24 +42,36 @@ class Boid():
         self.position += self.velocity
         self.edges()
         self.velocity += self.acceleration
-        self.velocity.limit(upper_limit=self.max_speed, lower_limit=0.1)
+        self.velocity.limit(upper_limit=self.max_speed, lower_limit=self.min_speed)
         self.acceleration = Vector(0, 0)
 
     def flock(self, boids):
-        alignment = self.align(boids)
-        cohesion = self.cohere(boids)
-        separation = self.separate(boids)
+        alignment = Vector(0, 0)
+        cohesion = Vector(0, 0)
+        separation = Vector(0, 0)
+
+        total_in_sight = 0
+        total_in_personal_space = 0
+        for boid in boids:
+            if boid is self:
+                continue
+
+            distance = self.position.distance(boid.position)
+            if distance < self.sight_radius:
+                alignment += boid.velocity
+                cohesion += boid.position
+                total_in_sight += 1
+            if distance < self.personal_space_radius:
+                difference = self.position - boid.position
+                separation += difference / distance**2
+                total_in_personal_space += 1
+
+        alignment = self.align(alignment, total_in_sight)
+        cohesion = self.cohere(cohesion, total_in_sight)
+        separation = self.separate(separation, total_in_personal_space)
         self.acceleration = alignment + cohesion + separation
 
-    def align(self, boids):
-        steering = Vector(0, 0)
-        total = 0
-        for boid in boids:
-            distance = self.position.distance(boid.position)
-            if not self is boid and distance < self.sight_radius:
-                steering += boid.velocity
-                total = total + 1
-
+    def align(self, steering, total):
         if total > 0:
             steering /= total
             steering.magnitude = self.max_speed
@@ -66,15 +80,7 @@ class Boid():
 
         return steering
 
-    def cohere(self, boids):
-        steering = Vector(0, 0)
-        total = 0
-        for boid in boids:
-            distance = self.position.distance(boid.position)
-            if not self is boid and distance < self.sight_radius:
-                steering = steering + boid.position
-                total = total + 1
-
+    def cohere(self, steering, total):
         if total > 0:
             steering /= total
             steering -= self.position
@@ -84,16 +90,7 @@ class Boid():
 
         return steering
 
-    def separate(self, boids):
-        steering = Vector(0, 0)
-        total = 0
-        for boid in boids:
-            distance = self.position.distance(boid.position)
-            if not self is boid and distance < 66:
-                difference = self.position - boid.position
-                steering = steering + (difference / distance**2)
-                total = total + 1
-
+    def separate(self, steering, total):
         if total > 0:
             steering /= total
             steering.magnitude = self.max_speed
