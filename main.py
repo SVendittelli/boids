@@ -2,14 +2,15 @@ from p5 import *
 from boid import Boid
 import numpy as np
 
-width = 750
-height = 750
+n = 1000
+width = n
+height = n
 
 flock = []
 
 def init():
     global flock
-    flock = [Boid(*np.random.rand(2)*750, width, height) for _ in range(30)]
+    flock = [Boid(*np.random.rand(2)*n, width, height) for _ in range(30)]
 
 def setup():
     init()

@@ -7,14 +7,20 @@ class Boid():
     def __init__(self, x, y, width, height):
         self.max_steer = 1
         self.max_speed = 5
-        self.min_speed = 0.5
         self.sight_radius = 100
-        self.personal_space_radius = 50
+        self.personal_space_radius = 60
         self.width = width
         self.height = height
         self.position = Vector(x, y)
         self.velocity = Vector.random_2D() * self.max_speed
         self.acceleration = Vector(0, 0)
+        self.al_weight = 1
+        self.co_weight = 1
+        self.sep_weight = 1.1
+        sum = self.al_weight + self.co_weight + self.sep_weight
+        self.al_weight /= sum
+        self.co_weight /= sum
+        self.sep_weight /= sum
 
     def show(self):
         stroke(255)
@@ -42,7 +48,7 @@ class Boid():
         self.position += self.velocity
         self.edges()
         self.velocity += self.acceleration
-        self.velocity.limit(upper_limit=self.max_speed, lower_limit=self.min_speed)
+        self.velocity.limit(upper_limit=self.max_speed)
         self.acceleration = Vector(0, 0)
 
     def flock(self, boids):
@@ -69,7 +75,8 @@ class Boid():
         alignment = self.align(alignment, total_in_sight)
         cohesion = self.cohere(cohesion, total_in_sight)
         separation = self.separate(separation, total_in_personal_space)
-        self.acceleration = alignment + cohesion + separation
+
+        self.acceleration += self.al_weight * alignment + self.co_weight * cohesion + self.sep_weight * separation
 
     def align(self, steering, total):
         if total > 0:
