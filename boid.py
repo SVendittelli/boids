@@ -8,23 +8,17 @@ class Boid():
         self.max_steer = 1
         self.max_speed = 5
         self.sight_radius = 100
-        self.personal_space_radius = 60
+        self.personal_space_radius = 50
         self.width = width
         self.height = height
         self.position = Vector(x, y)
+        self.bucket = self.determine_bucket()
         self.velocity = Vector.random_2D() * self.max_speed
         self.acceleration = Vector(0, 0)
-        self.al_weight = 1
-        self.co_weight = 1
-        self.sep_weight = 1.1
-        sum = self.al_weight + self.co_weight + self.sep_weight
-        self.al_weight /= sum
-        self.co_weight /= sum
-        self.sep_weight /= sum
+        self.al_weight, self.co_weight, self.sep_weight = ratio((1, 1, 1.1))
 
     def show(self):
         stroke(255)
-        # stroke_weight(16)
         # point(self.position.x, self.position.y)
         direction = self.velocity.copy()
         direction.magnitude = 7
@@ -47,9 +41,13 @@ class Boid():
     def update(self):
         self.position += self.velocity
         self.edges()
+        self.bucket = self.determine_bucket()
         self.velocity += self.acceleration
         self.velocity.limit(upper_limit=self.max_speed)
         self.acceleration = Vector(0, 0)
+
+    def determine_bucket(self):
+        return (math.floor(self.position.x / self.sight_radius), math.floor(self.position.y / self.sight_radius))
 
     def flock(self, boids):
         alignment = Vector(0, 0)
@@ -76,7 +74,7 @@ class Boid():
         cohesion = self.cohere(cohesion, total_in_sight)
         separation = self.separate(separation, total_in_personal_space)
 
-        self.acceleration += self.al_weight * alignment + self.co_weight * cohesion + self.sep_weight * separation
+        self.acceleration = self.al_weight * alignment + self.co_weight * cohesion + self.sep_weight * separation
 
     def align(self, steering, total):
         if total > 0:
@@ -107,12 +105,16 @@ class Boid():
         return steering
 
     def edges(self):
-        if self.position.x > self.width:
+        if self.position.x >= self.width:
             self.position.x = 0
         elif self.position.x < 0:
-            self.position.x = self.width
+            self.position.x = self.width - 1
 
-        if self.position.y > self.height:
+        if self.position.y >= self.height:
             self.position.y = 0
         elif self.position.y < 0:
-            self.position.y = self.height
+            self.position.y = self.height - 1
+
+def ratio(factors):
+    total = sum(factors)
+    return (f/total for f in factors)
